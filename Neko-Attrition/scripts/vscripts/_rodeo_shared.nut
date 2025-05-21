@@ -281,18 +281,16 @@ function AllowTeamRodeo( titan, trueorfalse )
 	if( !IsValid( titan ) || !IsAlive( titan ) )
 	return
 	if( trueorfalse == true )
-	{
-	    allowedarray.append( titan )
-		file.allowedarray = allowedarray
-	}
+	file.allowedarray = allowedarray
 	if( trueorfalse == false )
 	{
 		local newallowedarray = []
 		foreach( npc in allowedarray )
 		if( npc != titan )
 		newallowedarray.append( npc )
-		file.allowedarray = newallowedarray
+		allowedarray = newallowedarray
 	}
+	file.allowedarray = allowedarray
 }
 
 function IsAllowedTeamRodeo( titan )
