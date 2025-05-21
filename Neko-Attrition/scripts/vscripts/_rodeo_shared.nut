@@ -274,12 +274,10 @@ function CodeCallback_IsValidRodeoTarget( player, titan )
 
 function AllowTeamRodeo( titan, trueorfalse )
 {
-	local allowedarray = file.allowedarray
-	local validallowedarray = []
-	foreach( npc in allowedarray )
+	local allowedarray = []
+	foreach( npc in file.allowedarray )
 	if( IsValid( npc ) && IsAlive( npc ) )
-	validallowedarray.append( npc )
-	allowedarray = validallowedarray
+	allowedarray.append( npc )
 	if( !IsValid( titan ) || !IsAlive( titan ) )
 	return
 	if( trueorfalse == true )
@@ -299,7 +297,12 @@ function AllowTeamRodeo( titan, trueorfalse )
 
 function IsAllowedTeamRodeo( titan )
 {
+	local validallowedarray = []
 	foreach( npc in file.allowedarray )
+	if( IsValid( npc ) && IsAlive( npc ) )
+	validallowedarray.append( npc )
+	file.allowedarray = validallowedarray
+	foreach( npc in validallowedarray )
 	if( npc == titan )
 	return true
 
