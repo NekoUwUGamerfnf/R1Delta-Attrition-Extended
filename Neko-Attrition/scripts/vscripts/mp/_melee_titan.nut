@@ -109,6 +109,7 @@ function TitanMeleeRestoreTarget( target, e )
 {
 	target.ClearParent()
 	target.Anim_Stop()
+	if( target.IsPlayer() )
 	target.ClearAnimViewEntity()
 
 	if ( !target.IsNPC() )
@@ -286,6 +287,7 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 	attackerSequence.thirdPersonAnim = e.attackerAnimation3p
 	// attackerSequence.thirdPersonAnimIdle = "at_melee_sync_frontkill_end_idle"
 
+    if( attacker.IsPlayer() )
 	attackerSequence.firstPersonAnim = e.attackerAnimation1p
 	targetSequence.thirdPersonAnim = e.targetAnimation3p
 	targetSequence.blendTime = 0.25
@@ -304,7 +306,11 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 
 	EmitDifferentSoundsOnEntityForPlayerAndWorld( e.TitanSpecific1pSyncMeleeSound, e.TitanSpecific3pSyncMeleeSound, attacker, attacker )
 
-    local attackerViewBody = Wallrun_CreateCopyOfPilotModel( target ) //attackerViewBody is the model of the pilot getting ripped out of the cockpit
+    local attackerViewBody //= Wallrun_CreateCopyOfPilotModel( target ) //attackerViewBody is the model of the pilot getting ripped out of the cockpit
+	if( target.IsPlayer() )
+	attackerViewBody = Wallrun_CreateCopyOfPilotModel( target )
+	else
+	attackerViewBody = CreateCopyOfPilotModel( target )
 	attackerViewBody.SetOrigin( ref.GetOrigin() )
 	e.attackerViewBody = attackerViewBody
 	attackerViewBody.SetOwner( attacker )
@@ -321,15 +327,20 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 	targetBodySequence.attachment = "ref"
 	targetBodySequence.blendTime = 0.25
 	targetBodySequence.thirdPersonAnim = e.targetPilotAnimationForObserver
+	if( target.IsPlayer() )
 	targetBodySequence.firstPersonAnim = e.targetPilotAnimationForObserver1st
 
 
 	local soul = target.GetTitanSoul()
 	soul.SetInvalidHealthBarEnt( true )
 
+    local targetTitan = target
+    if( target.IsPlayer() )
+	{
 	e.oldPlayerSettings <- target.s.storedPlayerSettings
 	target.s.storedPlayerSettings = "pilot_titan_cockpit" // needs to be per titan
-	local targetTitan = CreateTitanFromPlayer( target ) //TargetTitan is the NPC Titan that is created temporarily during execution
+	targetTitan = CreateTitanFromPlayer( target ) //TargetTitan is the NPC Titan that is created temporarily during execution
+	}
 
 //	if ( !( "isRodeoEnabled" in targetTitan.s ) )
 //		targetTitan.s.isRodeoEnabled <- null
@@ -346,7 +357,17 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 		ReturnFlagFromPlayer( target, attacker )
 	}
 
+    if( target.IsPlayer() )
 	TitanBecomesPilot( target, targetTitan )
+	local prop
+    if( !target.IsPlayer() )
+	{
+	prop = CreateEntity( "npc_soldier" )
+	DispatchSpawn( prop )
+	prop.SetInvulnerable()
+	prop.SetTeam( target.GetTeam() )
+	prop.SetModel( attackerViewBody.GetModelName() )
+	}
 
 	local soul = targetTitan.GetTitanSoul()
 	Assert( soul )
@@ -354,15 +375,27 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 
 	AddAnimEvent( targetTitan, "rider_rodeo_over", ForceRodeoOver  )
 
+    if( target.IsPlayer() )
+	{
 	targetTitan.SetOwner( target )
 	targetTitan.kv.VisibilityFlags = 6 //owner cant see
+	}
 	targetTitan.SetInvulnerable() //Setting target of execution as invulnerable to prevent them dying mid-way
 	HideTitanEyePartial( targetTitan )
 	targetTitan.s.noLongerCountsForLTS <- true
 
+    if( target.IsPlayer() )
+	{
 	target.SetOwner( attacker )
 	target.kv.VisibilityFlags = 6 //owner cant see
 	targetTitan.PlayerMelee_ExecutionStartTarget( attacker )
+	}
+	else if( IsValid( prop ) )
+	{
+	prop.SetOwner( attacker )
+	prop.kv.VisibilityFlags = 6 //owner cant see
+	target = prop
+	}
 	e.targetTitan <- targetTitan
 	if ( GameRules.GetGameMode() == ATTRITION )
 		e.gaveTitanAttritionPoints <- false
@@ -423,9 +456,12 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 
 			if ( IsValid( target ) )
 			{
+				if( target.IsPlayer() )
+				{
 				target.PlayerMelee_ExecutionEndTarget()
 				if ( HasAnimEvent( target, "pink_mist" ) )
 					DeleteAnimEvent( target, "pink_mist", MeleePinkMist )
+				}
 
 				if ( IsAlive( e.target ) )
 					MeleePinkMist( null, e )
@@ -463,10 +499,13 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 				{
 					target.Anim_Stop()
 					target.SetOwner( null )
+					if( target.IsPlayer() )
+					{
 					target.GetFirstPersonProxy().Anim_Stop()
 					target.ClearAnimViewEntity()
-					target.kv.VisibilityFlags = 7 // all can see
 					target.SetPlayerSettings( e.oldPlayerSettings )
+					}
+					target.kv.VisibilityFlags = 7 // all can see
 				}
 			}
 		}
@@ -524,6 +563,7 @@ function MeleePinkMist( _, e ) //first parameter isn't used, but function signat
 	local gibModel = GetGibModel( target )
 	local vec = e.attackerViewBody.GetOrigin() - e.attacker.GetOrigin()
 	vec.Norm()
+	if( target.IsPlayer() )
 	e.attackerViewBody.Gib( gibModel, vec, false )
 
 	// [LJS]원래 코드. 스트라이더가 타이탄 gib 시 파일럿 혈흔.
@@ -540,6 +580,7 @@ function MeleePinkMist( _, e ) //first parameter isn't used, but function signat
 		target.Die( e.target, target, { damageSourceId = eDamageSourceId.titan_execution, scriptType = DF_GIB } )
 	}
 
+    if( target.IsPlayer() )
 	target.ClearAnimViewEntity()
 
 	target.ClearInvulnerable()
@@ -698,7 +739,9 @@ function MeleeThread_OgreVsTitan( actions, action, attacker, target )
 	local targetSequence = clone attackerSequence
 	printt( "MeleeThread_OgreVsTitan" )
 	attackerSequence.thirdPersonAnim = attackerAnimation3p
+	if( attacker.IsPlayer() )
 	attackerSequence.firstPersonAnim = attackerAnimation1p
+	if( target.IsPlayer() )
 	targetSequence.firstPersonAnim = targetAnimation1p
 	targetSequence.thirdPersonAnim = targetAnimation3p
 	targetSequence.blendTime = 0.25
@@ -738,9 +781,12 @@ function MeleeThread_OgreVsTitan( actions, action, attacker, target )
 
 			if ( IsValid( attacker ) )
 			{
+				if( attacker.IsPlayer() )
+				{
 				attacker.UnforceStand()
-				attacker.ClearParent()
 				attacker.ClearAnimViewEntity()
+				}
+				attacker.ClearParent()
 				attacker.DeployWeapon()
 				attacker.PlayerMelee_ExecutionEndAttacker()
 
@@ -761,8 +807,11 @@ function MeleeThread_OgreVsTitan( actions, action, attacker, target )
 
 				target.ClearParent()
 				target.ClearInvulnerable()
+				if( target.IsPlayer() )
+				{
 				target.ClearAnimViewEntity()
 				target.EnableWeaponViewModel()
+				}
 				target.PlayerMelee_ExecutionEndTarget()
 
 				if ( e.lostArm && IsAlive( target ) )

@@ -28,6 +28,7 @@ function main()
 	Globalize( SquadAssault )
 	Globalize( SpawnFrontlineSquad )
 	Globalize( TitanHasPilotInTitan )
+	Globalize( CreateCopyOfPilotModel )
 
 	Globalize( GetCurrentFrontline )
 	Globalize( GetTeamCombatDir )
@@ -149,6 +150,7 @@ function main()
 //	file.debug = DEBUG_NPC_SPAWN // + DEBUG_ASSAULTPOINT // + DEBUG_KPS // + DEBUG_FRONTLINE_SELECTED
 	// end debug stuff
 	file.pilotedtitans <- []
+	file.pilotedtitanmodels <- []
 
 	SpawnPoints_SetRatingMultipliers_Enemy( TD_AI, -2.0, -0.25, 0.0 )
 	SpawnPoints_SetRatingMultipliers_Friendly( TD_AI, 0.5, 0.25, 0.0 )
@@ -177,7 +179,7 @@ function GiveTitanPilot( titan, trueorfalse )
 	if( !IsValid( titan ) || !IsAlive( titan ) )
 	return
 	if( trueorfalse == true )
-	pilotedtitans.append( npc )
+	pilotedtitans.append( titan )
 	if( trueorfalse == false )
 	{
 		local newpilotedtitans
@@ -187,6 +189,21 @@ function GiveTitanPilot( titan, trueorfalse )
 		pilotedtitans = newpilotedtitans
 	}
 	file.pilotedtitans = pilotedtitans
+}
+
+function CreateCopyOfPilotModel( titan )
+{
+	local model = "models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl"
+	if( titan in file.pilotedtitanmodels )
+	model = file.pilotedtitanmodels[ titan ]
+	local prop = CreatePropDynamic( model )
+	prop.SetTeam( titan.GetTeam() )
+	return prop
+}
+
+function GiveTitanPilotModel( titan, model )
+{
+	file.pilotedtitanmodels[ titan ] <- model
 }
 
 function SetupLevelAICount()
@@ -517,7 +534,7 @@ function CreateTitanForTeam( team, spawnOrigin, spawnAngles )
 	AttritionGiveTitanRandomTacticalAbility( titan )
 	GiveTitanRandomShoulderWeapon( titan )
 	AllowTeamRodeo( titan, true )
-	//GiveTitanPilot( titan, true ) Not Enabled Until Pilots Models Are Imported
+	GiveTitanPilot( titan, true )
 	waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
 	thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 
