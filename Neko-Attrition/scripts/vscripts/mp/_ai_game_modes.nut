@@ -150,7 +150,7 @@ function main()
 //	file.debug = DEBUG_NPC_SPAWN // + DEBUG_ASSAULTPOINT // + DEBUG_KPS // + DEBUG_FRONTLINE_SELECTED
 	// end debug stuff
 	file.pilotedtitans <- []
-	file.pilotedtitanmodels <- []
+	file.pilotedtitanmodels <- {}
 
 	SpawnPoints_SetRatingMultipliers_Enemy( TD_AI, -2.0, -0.25, 0.0 )
 	SpawnPoints_SetRatingMultipliers_Friendly( TD_AI, 0.5, 0.25, 0.0 )
@@ -204,6 +204,68 @@ function CreateCopyOfPilotModel( titan )
 function GiveTitanPilotModel( titan, model )
 {
 	file.pilotedtitanmodels[ titan ] <- model
+}
+
+function NPCPilotEmbarkTitan( pilot, titan )
+{
+	pilot.EndSignal( "OnDestroy" )
+	pilot.EndSignal( "OnDeath" )
+	titan.EndSignal( "OnDestroy" )
+	titan.EndSignal( "OnDeath" )
+	local embarkSet = FindBestEmbark( pilot, titan )
+	while( embarkSet == null )
+	{
+		wait 0.1
+		embarkSet = FindBestEmbark( pilot, titan )
+	}
+	local animation = embarkSet.animSet.titanKneelingAnim
+	local titanSubClass = GetSoulTitanType( titan.GetTitanSoul() )
+	local Audio = GetAudioFromAlias( titanSubClass, embarkSet.audioSet.thirdPersonKneelingAudioAlias )
+	local sequence = CreateFirstPersonSequence()
+	sequence.attachment = "hijack"
+	sequence.useAnimatedRefAttachment = embarkSet.action.useAnimatedRefAttachment
+	sequence.thirdPersonAnim = GetAnimFromAlias( titanSubClass, embarkSet.animSet.thirdPersonKneelingAlias )
+	// Never Used Because Game Has No Grapple
+	/*
+	if ( titan.GetTitanSoul().GetStance() > STANCE_STANDING )
+	{
+		sequence.thirdPersonAnim = GetAnimFromAlias( titanSubClass, embarkSet.animSet.thirdPersonStandingAlias )
+	    animation = embarkSet.animSet.titanStandingAnim
+		Audio = GetAudioFromAlias( titanSubClass, embarkSet.audioSet.thirdPersonStandingAudioAlias )
+	}
+	*/
+
+	if ( IsCloaked( pilot ) )
+		pilot.SetCloakDuration( 0, 0, 1.5 )
+
+	pilot.SetInvulnerable()
+	pilot.Anim_Stop()
+	thread FirstPersonSequence( sequence, pilot, titan )
+	EmitSoundOnEntity( titan, Audio )
+	waitthread PlayAnimGravity( titan, animation )
+	SetStanceStand( titan.GetTitanSoul() )
+	GiveTitanPilot( titan, true )
+	GiveTitanPilotModel( titan, pilot.GetModelName() )
+	pilot.Destroy()
+}
+
+function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
+{
+	local dropPod = CreatePropDynamic( DROPPOD_MODEL ) // model is set in InitFireteamDropPod()
+	InitFireteamDropPod( dropPod )
+
+	local options = {}
+	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
+	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
+
+	local soldierEntities = [pilot]
+	pilot.kv.VisibilityFlags = 7
+	pilot.SetTitle( title )
+	ActivateFireteamDropPod( dropPod, null, soldierEntities )
+	pilot.WaittillAnimDone()
+	dropPod.kv.VisibilityFlags = 1
+
+	return pilot
 }
 
 function SetupLevelAICount()
@@ -508,37 +570,78 @@ function Spawn_TrackedPilotWithTitan( team, spawnPoint )
 		return
 	if( "inUse" in spawnPoint.s )
     spawnPoint.s.inUse <- true
-	CreateTitanForTeam( team, spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
+	CreateTitanForTeam( team, spawnPoint, spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 	if( "inUse" in spawnPoint.s )
 	spawnPoint.s.inUse <- false
 }
 
-function CreateTitanForTeam( team, spawnOrigin, spawnAngles )
+function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 {
 	local titanDataTable = GetRandomTitanLoadout()
 	local titans = Random([ "titan_stryder", "titan_atlas", "titan_ogre" ])
 	titanDataTable.setFile = titans
 	local settings = titanDataTable.setFile
 	//titanDataTable.primary = Random 
-
+	local pilot = CreateEntity( "npc_soldier" )
+	DispatchSpawn( pilot )
+	pilot.SetOrigin( spawnOrigin )
+	pilot.SetTeam( team )
+	pilot.SetModel( "models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl" )
+	pilot.kv.VisibilityFlags = 1
+	pilot.SetInvulnerable()
+	local title = ""
+	if( titans == "titan_stryder" )
+	title = "Stryder's Pilot"
+	else if( titans == "titan_atlas" )
+	title = "Atlas's Pilot"
+	else if( titans == "titan_ogre" )
+	title = "Ogre's Pilot"
+	thread Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
+	wait 2.5
 	local titan = CreateNPCTitanFromSettings( settings, team, spawnOrigin, spawnAngles )
 	if( titans == "titan_stryder" )
-	titan.SetTitle( "Stryder" )
+	titan.SetTitle( "#CHASSIS_STRYDER_NAME" )
 	else if( titans == "titan_atlas" )
-	titan.SetTitle( "Atlas" )
+	titan.SetTitle( "#CHASSIS_ATLAS_NAME" )
 	else if( titans == "titan_ogre" )
-	titan.SetTitle( "Ogre" )
+	titan.SetTitle( "#CHASSIS_OGRE_NAME" )
 	titan.GiveWeapon( titanDataTable.primary, [] )
     titan.TakeOffhandWeapon( 0 )
     titan.TakeOffhandWeapon( 1 )
 	AttritionGiveTitanRandomTacticalAbility( titan )
 	GiveTitanRandomShoulderWeapon( titan )
 	AllowTeamRodeo( titan, true )
-	GiveTitanPilot( titan, true )
 	waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
+	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
+	if( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
+	{
+		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
+	    pilot.EnableBehavior( "Follow" )
+		pilot.DisableBehavior( "Assault" )
+	    thread NPCPilotEmbarkTitan( pilot, titan )
+		thread TitanStandUpHandle( pilot, titan )
+		return
+	}
+	if( IsValid( titan ) && IsAlive( titan ) )
 	thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 
-	return titan
+	return
+}
+
+function TitanStandUpHandle( pilot, titan )
+{
+	pilot.EndSignal( "OnDestroy" )
+	pilot.EndSignal( "OnDeath" )
+	titan.EndSignal( "OnDestroy" )
+	titan.EndSignal( "OnDeath" )
+	OnThreadEnd(
+		function() : ( titan )
+		{
+			if( IsValid( titan ) && IsAlive( titan ) && !TitanHasPilotInTitan( titan ) )
+			thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
+		}
+	)
+	WaitForever()
 }
 
 function AttritionGiveTitanRandomTacticalAbility( titan )

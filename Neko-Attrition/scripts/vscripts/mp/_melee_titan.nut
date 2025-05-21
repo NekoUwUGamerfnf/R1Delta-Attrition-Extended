@@ -364,6 +364,7 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 	{
 	prop = CreateEntity( "npc_soldier" )
 	DispatchSpawn( prop )
+	prop.SetOrigin( target.GetOrigin() )
 	prop.SetInvulnerable()
 	prop.SetTeam( target.GetTeam() )
 	prop.SetModel( attackerViewBody.GetModelName() )
