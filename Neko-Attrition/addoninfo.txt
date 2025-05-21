@@ -1,0 +1,9 @@
+"AddonInfo"
+{
+	"addontitle"			"Neko's Attrition Extended Overhual"
+	"addonDescription"		"Attrition With Titans"
+	"addonversion"			"1.0.0"
+	"addonauthor"			"NekoUwUGamerfnf"
+
+	"addonContent_Script"	"1"
+}
