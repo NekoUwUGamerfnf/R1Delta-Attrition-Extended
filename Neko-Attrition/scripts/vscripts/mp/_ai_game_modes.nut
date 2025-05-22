@@ -151,6 +151,7 @@ function main()
 	// end debug stuff
 	file.pilotedtitans <- []
 	file.pilotedtitanmodels <- {}
+	file.spawnedtitans <- {}
 	AddDamageByCallback( "npc_titan", Execution )
 
 	SpawnPoints_SetRatingMultipliers_Enemy( TD_AI, -2.0, -0.25, 0.0 )
@@ -162,11 +163,11 @@ function TitanHasPilotInTitan( titan )
 	local pilotedtitans = []
 	foreach( npc in file.pilotedtitans )
 	if( IsValid( npc ) && IsAlive( npc ) )
-	pilotedtitans.append( npc )
+	    pilotedtitans.append( npc )
 	file.pilotedtitans = pilotedtitans
 	foreach( npc in pilotedtitans )
-	if( npc == titan )
-	return true
+	    if( npc == titan )
+	        return true
 
 	return false
 }
@@ -175,7 +176,7 @@ function Execution( ent, damageInfo )
 {
 	local attacker = damageInfo.GetAttacker()
 	if( !ent.IsTitan() || damageInfo.GetDamageSourceIdentifier() != eDamageSourceId.titan_melee || !TitanHasPilotInTitan( attacker ) || !ent.GetDoomedState() || !CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) )
-	return
+	    return
 
     damageInfo.SetDamage( 0 )
 	thread PlayerTriesExecutionMelee( attacker, ent )
@@ -206,7 +207,7 @@ function CreateCopyOfPilotModel( titan )
 {
 	local model = "models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl"
 	if( titan in file.pilotedtitanmodels )
-	model = file.pilotedtitanmodels[ titan ]
+	    model = file.pilotedtitanmodels[ titan ]
 	local prop = CreatePropDynamic( model )
 	prop.SetTeam( titan.GetTeam() )
 	return prop
@@ -266,6 +267,8 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 	InitFireteamDropPod( dropPod )
 
 	local options = {}
+	pilot.SetInvulnerable()
+	pilot.AllowSpectreTraverse( false )
 	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
 	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 
@@ -273,10 +276,23 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 	pilot.kv.VisibilityFlags = 7
 	pilot.SetTitle( title )
 	ActivateFireteamDropPod( dropPod, null, soldierEntities )
+	pilot.ClearInvulnerable()
 	pilot.WaittillAnimDone()
+	pilot.AllowSpectreTraverse( true )
 	dropPod.kv.VisibilityFlags = 1
 
 	return pilot
+}
+
+function TrackTitan( titan )
+{
+	local team = titan.GetTeam()
+	while( IsValid( titan ) && IsAlive( titan ) )
+	{
+		team = titan.GetTeam()
+		wait 0.1
+	}
+	file.spawnedtitans[team] <- file.spawnedtitans[team] - 1
 }
 
 function SetupLevelAICount()
@@ -592,8 +608,9 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	local titans = Random([ "titan_stryder", "titan_atlas", "titan_ogre" ])
 	titanDataTable.setFile = titans
 	local settings = titanDataTable.setFile
-	//titanDataTable.primary = Random 
-	local pilot = CreateEntity( "npc_soldier" )
+	//titanDataTable.primary = Random
+
+	local pilot = CreateEntity( "npc_spectre" )
 	DispatchSpawn( pilot )
 	pilot.SetOrigin( spawnOrigin )
 	pilot.SetTeam( team )
@@ -623,6 +640,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	AttritionGiveTitanRandomTacticalAbility( titan )
 	GiveTitanRandomShoulderWeapon( titan )
 	AllowTeamRodeo( titan, true )
+	thread TrackTitan( titan )
 	waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
 	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
 	if( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
@@ -1097,6 +1115,9 @@ function SpawnFrontlineSquad( team, numFreeSlots )
 
 function SpawnPilotWithTitans( team )
 {
+	local waittime = "0." + team.tostring()
+	waittime = waittime.tointeger()
+	wait waittime
 	while( true )
 	{
 	if ( !IsNPCSpawningEnabled() || SpawnPoints_GetTitan().len() <= 0 )
@@ -1117,24 +1138,23 @@ function SpawnPilotWithTitans( team )
 
     if ( shouldSpawnPilotWithTitan )
 	{
-		wait RandomFloat( 1.5, 2.5 )
 		thread Spawn_TrackedPilotWithTitan( team, spawnPoint )
-		wait level.npcRespawnWait
+		if( team in file.spawnedtitans )
+		    file.spawnedtitans[team] <- file.spawnedtitans[team] + 1
+		else
+		    file.spawnedtitans[team] <- 1
 	}
-	else
-	wait 0.1
+	wait level.npcRespawnWait
 	}
 }
 
 function ShouldSpawnPilotWithTitan( team )
 {
-	local teamstitans = 0
-	foreach( npc in GetNPCArray() )
-    if( npc.IsTitan() && !IsValid( npc.GetBossPlayer() ) && npc.GetTeam() == team ) // Titans With Boss Players Shouldn't Be Counted
-	teamstitans += 1
+	if( !(team in file.spawnedtitans) )
+	    return true
 
-	if( teamstitans < 3 )
-	return true
+	if( file.spawnedtitans[team] < 3 )
+	    return true
 
 	return false
 }
