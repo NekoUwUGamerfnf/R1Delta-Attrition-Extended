@@ -519,6 +519,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	)
 
 	attacker.EndSignal( "Disconnected" )
+	attacker.EndSignal( "OnDestroy" )
 	attacker.EndSignal( "OnDeath" )
 	target.EndSignal( "Disconnected" )
 //	target.EndSignal( "OnDeath" )
@@ -549,7 +550,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	targetTitan.kv.VisibilityFlags = 7 // owner can see
 	targetTitan.SetNextThinkNow()
 	wait duration - timer
-	if ( !attacker.IsPlayer() || !target.IsPlayer() )
+	if ( IsValid( target ) )
 	    MeleePinkMist( e, e )
 }
 
