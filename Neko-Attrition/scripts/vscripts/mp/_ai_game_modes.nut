@@ -162,11 +162,11 @@ function TitanHasPilotInTitan( titan )
 {
 	local pilotedtitans = []
 	foreach( npc in file.pilotedtitans )
-	if( IsValid( npc ) && IsAlive( npc ) )
+	if ( IsValid( npc ) && IsAlive( npc ) )
 	    pilotedtitans.append( npc )
 	file.pilotedtitans = pilotedtitans
 	foreach( npc in pilotedtitans )
-	    if( npc == titan )
+	    if ( npc == titan )
 	        return true
 
 	return false
@@ -175,7 +175,7 @@ function TitanHasPilotInTitan( titan )
 function Execution( ent, damageInfo )
 {
 	local attacker = damageInfo.GetAttacker()
-	if( !ent.IsTitan() || damageInfo.GetDamageSourceIdentifier() != eDamageSourceId.titan_melee || !TitanHasPilotInTitan( attacker ) || !ent.GetDoomedState() || !CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) )
+	if ( !ent.IsTitan() || damageInfo.GetDamageSourceIdentifier() != eDamageSourceId.titan_melee || !TitanHasPilotInTitan( attacker ) || !ent.GetDoomedState() || !CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) )
 	    return
 
     damageInfo.SetDamage( 0 )
@@ -186,17 +186,17 @@ function GiveTitanPilot( titan, trueorfalse )
 {
 	local pilotedtitans = []
 	foreach( npc in file.pilotedtitans )
-	if( IsValid( npc ) && IsAlive( npc ) )
+	if ( IsValid( npc ) && IsAlive( npc ) )
 	pilotedtitans.append( npc )
-	if( !IsValid( titan ) || !IsAlive( titan ) )
+	if ( !IsValid( titan ) || !IsAlive( titan ) )
 	return
-	if( trueorfalse == true )
+	if ( trueorfalse == true )
 	pilotedtitans.append( titan )
-	if( trueorfalse == false )
+	if ( trueorfalse == false )
 	{
 		local newpilotedtitans
 		foreach( npc in pilotedtitans )
-		if( npc != titan )
+		if ( npc != titan )
 		newpilotedtitans.append( titan )
 		pilotedtitans = newpilotedtitans
 	}
@@ -206,7 +206,7 @@ function GiveTitanPilot( titan, trueorfalse )
 function CreateCopyOfPilotModel( titan )
 {
 	local model = "models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl"
-	if( titan in file.pilotedtitanmodels )
+	if ( titan in file.pilotedtitanmodels )
 	    model = file.pilotedtitanmodels[ titan ]
 	local prop = CreatePropDynamic( model )
 	prop.SetTeam( titan.GetTeam() )
@@ -593,12 +593,12 @@ function Spawn_TrackedPilotWithTitan( team, spawnPoint )
 	if ( !IsNPCSpawningEnabled( team ) )
 		return []
 
-	if( !spawnPoint )
+	if ( !spawnPoint )
 		return
-	if( "inUse" in spawnPoint.s )
+	if ( "inUse" in spawnPoint.s )
     spawnPoint.s.inUse <- true
 	CreateTitanForTeam( team, spawnPoint, spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
-	if( "inUse" in spawnPoint.s )
+	if ( "inUse" in spawnPoint.s )
 	spawnPoint.s.inUse <- false
 }
 
@@ -619,20 +619,20 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	pilot.SetMaxHealth( 750 )
 	pilot.SetHealth( pilot.GetMaxHealth() )
 	local title = ""
-	if( titans == "titan_stryder" )
+	if ( titans == "titan_stryder" )
 	title = "Stryder's Pilot"
-	else if( titans == "titan_atlas" )
+	else if ( titans == "titan_atlas" )
 	title = "Atlas's Pilot"
-	else if( titans == "titan_ogre" )
+	else if ( titans == "titan_ogre" )
 	title = "Ogre's Pilot"
 	thread Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 	wait 2.5
 	local titan = CreateNPCTitanFromSettings( settings, team, spawnOrigin, spawnAngles )
-	if( titans == "titan_stryder" )
+	if ( titans == "titan_stryder" )
 	titan.SetTitle( "#CHASSIS_STRYDER_NAME" )
-	else if( titans == "titan_atlas" )
+	else if ( titans == "titan_atlas" )
 	titan.SetTitle( "#CHASSIS_ATLAS_NAME" )
-	else if( titans == "titan_ogre" )
+	else if ( titans == "titan_ogre" )
 	titan.SetTitle( "#CHASSIS_OGRE_NAME" )
 	titan.GiveWeapon( titanDataTable.primary, [] )
     titan.TakeOffhandWeapon( 0 )
@@ -643,7 +643,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	thread TrackTitan( titan )
 	waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
 	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
-	if( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
+	if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
 	{
 		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
 	    pilot.EnableBehavior( "Follow" )
@@ -652,7 +652,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 		thread TitanStandUpHandle( pilot, titan )
 		return
 	}
-	if( IsValid( titan ) && IsAlive( titan ) )
+	if ( IsValid( titan ) && IsAlive( titan ) )
 	thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 
 	return
@@ -667,7 +667,7 @@ function TitanStandUpHandle( pilot, titan )
 	OnThreadEnd(
 		function() : ( titan )
 		{
-			if( IsValid( titan ) && IsAlive( titan ) && !TitanHasPilotInTitan( titan ) )
+			if ( IsValid( titan ) && IsAlive( titan ) && !TitanHasPilotInTitan( titan ) )
 			thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 		}
 	)
@@ -1129,7 +1129,7 @@ function SpawnPilotWithTitans( team )
 	foreach( spawnpoint in spawnpoints )
 	if ( IsValid( spawnpoints ) && IsSpawnpointValidDrop( spawnpoint, team ) )
 	SpawnPoints.append( spawnpoint )
-	if( SpawnPoints.len() <= 0 )
+	if ( SpawnPoints.len() <= 0 )
 	{
 		thread SpawnPilotWithTitans( team )
 		return
@@ -1139,7 +1139,7 @@ function SpawnPilotWithTitans( team )
     if ( shouldSpawnPilotWithTitan )
 	{
 		thread Spawn_TrackedPilotWithTitan( team, spawnPoint )
-		if( team in file.spawnedtitans )
+		if ( team in file.spawnedtitans )
 		    file.spawnedtitans[team] <- file.spawnedtitans[team] + 1
 		else
 		    file.spawnedtitans[team] <- 1
@@ -1150,10 +1150,10 @@ function SpawnPilotWithTitans( team )
 
 function ShouldSpawnPilotWithTitan( team )
 {
-	if( !(team in file.spawnedtitans) )
+	if ( !(team in file.spawnedtitans) )
 	    return true
 
-	if( file.spawnedtitans[team] < 3 )
+	if ( file.spawnedtitans[team] < 3 )
 	    return true
 
 	return false
