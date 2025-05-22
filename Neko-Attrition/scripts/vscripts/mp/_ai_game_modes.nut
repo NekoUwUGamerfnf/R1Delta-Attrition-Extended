@@ -618,6 +618,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	pilot.kv.VisibilityFlags = 1
 	pilot.SetMaxHealth( 750 )
 	pilot.SetHealth( pilot.GetMaxHealth() )
+	DisableLeeching( pilot )
 	local title = ""
 	if( titans == "titan_stryder" )
 	title = "Stryder's Pilot"
