@@ -151,6 +151,7 @@ function MeleeThread_AtlasVsTitanNPC( actions, action, attacker, target )
 	attackerSequence.thirdPersonAnim = attackerAnimation3p
 	// attackerSequence.thirdPersonAnimIdle = "at_melee_sync_frontkill_end_idle"
 
+    if( attacker.IsPlayer() )
 	attackerSequence.firstPersonAnim = attackerAnimation1p
 	targetSequence.thirdPersonAnim = targetAnimation3p
 	targetSequence.blendTime = 0.25
@@ -377,13 +378,10 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 	Assert( soul )
 	soul.ClearRodeoAllowed()
 
-	AddAnimEvent( targetTitan, "rider_rodeo_over", ForceRodeoOver  )
+	AddAnimEvent( targetTitan, "rider_rodeo_over", ForceRodeoOver )
 
-    if( target.IsPlayer() )
-	{
 	targetTitan.SetOwner( target )
 	targetTitan.kv.VisibilityFlags = 6 //owner cant see
-	}
 	targetTitan.SetInvulnerable() //Setting target of execution as invulnerable to prevent them dying mid-way
 	HideTitanEyePartial( targetTitan )
 	targetTitan.s.noLongerCountsForLTS <- true
