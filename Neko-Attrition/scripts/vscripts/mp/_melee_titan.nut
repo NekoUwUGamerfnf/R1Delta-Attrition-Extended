@@ -514,6 +514,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 					target.ClearAnimViewEntity()
 					target.SetPlayerSettings( e.oldPlayerSettings )
 					target.kv.VisibilityFlags = 7 // all can see
+					target.Die()
 				}
 			}
 		}
@@ -531,6 +532,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	thread FirstPersonSequence( targetBodySequence, target, ref )
 	thread FirstPersonSequence( attackerSequence, attacker, ref )
 	thread FirstPersonSequence( targetSequence, targetTitan, ref )
+	thread HandlePlayerTitanKill( target, targetTitan )
 	local duration = attacker.GetSequenceDuration( attackerSequence.thirdPersonAnim )
 
 	if ( e.targetAnimation3p == "at_melee_sync_frontdeath" )
@@ -551,6 +553,22 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	targetTitan.kv.VisibilityFlags = 7 // owner can see
 	targetTitan.SetNextThinkNow()
 	wait duration - timer
+}
+
+function HandlePlayerTitanKill( target, targetTitan )
+{
+	targetTitan.EndSignal( "OnDestroy" )
+	target.EndSignal( "OnDestroy" )
+	targetTitan.EndSignal( "OnDeath" )
+	target.EndSignal( "OnDeath" )
+	OnThreadEnd (
+		function () : ( targetTitan )
+		{
+			if( IsValid( targetTitan ) && IsAlive( targetTitan ) )
+			targetTitan.Die()
+		}
+	)
+	targetTitan.WaittillAnimDone()
 }
 
 function MeleePinkMist( _, e ) //first parameter isn't used, but function signature is like this because it's being called from an anim event
