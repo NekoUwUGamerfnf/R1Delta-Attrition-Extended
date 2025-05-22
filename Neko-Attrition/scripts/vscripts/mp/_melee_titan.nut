@@ -564,7 +564,7 @@ function HandlePlayerTitanKill( target, targetTitan )
 	OnThreadEnd (
 		function () : ( targetTitan )
 		{
-			if( IsValid( targetTitan ) && IsAlive( targetTitan ) )
+			if ( IsValid( targetTitan ) && IsAlive( targetTitan ) )
 			targetTitan.Die()
 		}
 	)
