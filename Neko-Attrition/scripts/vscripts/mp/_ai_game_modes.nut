@@ -268,7 +268,7 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 
 	local options = {}
 	pilot.SetInvulnerable()
-	pilot.AllowSpectreTraverse( false )
+	pilot.DisableStarts()
 	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
 	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 
@@ -278,7 +278,7 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 	ActivateFireteamDropPod( dropPod, null, soldierEntities )
 	pilot.ClearInvulnerable()
 	pilot.WaittillAnimDone()
-	pilot.AllowSpectreTraverse( true )
+	pilot.EnableStarts()
 	dropPod.kv.VisibilityFlags = 1
 
 	return pilot
@@ -610,7 +610,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	local settings = titanDataTable.setFile
 	//titanDataTable.primary = Random
 
-	local pilot = CreateEntity( "npc_spectre" )
+	local pilot = CreateEntity( "npc_soldier" )
 	DispatchSpawn( pilot )
 	pilot.SetOrigin( spawnOrigin )
 	pilot.SetTeam( team )
@@ -618,7 +618,6 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	pilot.kv.VisibilityFlags = 1
 	pilot.SetMaxHealth( 750 )
 	pilot.SetHealth( pilot.GetMaxHealth() )
-	DisableLeeching( pilot )
 	local title = ""
 	if( titans == "titan_stryder" )
 	title = "Stryder's Pilot"
