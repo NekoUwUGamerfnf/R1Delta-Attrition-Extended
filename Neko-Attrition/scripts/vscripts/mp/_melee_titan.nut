@@ -196,10 +196,13 @@ function MeleeThread_AtlasVsTitanNPC( actions, action, attacker, target )
 			if ( IsValid( attacker ) )
 			{
 				attacker.ClearInvulnerable()
+				if( attacker.IsPlayer() )
+				{
 				attacker.UnforceStand()
-				attacker.ClearParent()
 				attacker.ClearAnimViewEntity()
 				attacker.DeployWeapon()
+				}
+				attacker.ClearParent()
 				attacker.PlayerMelee_ExecutionEndAttacker()
 
 				if ( IsAlive( attacker ) )
@@ -442,10 +445,13 @@ function MeleeThread_TitanRipsPilot( e, actions, action, attacker, target )
 
 			if ( IsValid( attacker ) )
 			{
+				if( attacker.IsPlayer() )
+				{
 				attacker.UnforceStand()
-				attacker.ClearParent()
 				attacker.ClearAnimViewEntity()
 				attacker.DeployWeapon()
+				}
+				attacker.ClearParent()
 				attacker.PlayerMelee_ExecutionEndAttacker()
 
 				if ( IsAlive( attacker ) )
@@ -537,7 +543,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	local timer
 	local titanType = GetSoulTitanType(attacker.GetTitanSoul())
 
-	if ( titanType != null )
+	if ( attacker.IsPlayer() && titanType != null )
 	{
 		local titanDataTable = GetPlayerClassDataTable( attacker, "titan" )
 		local titanSettings = titanDataTable.playerSetFile
@@ -786,9 +792,9 @@ function MeleeThread_OgreVsTitan( actions, action, attacker, target )
 				{
 				attacker.UnforceStand()
 				attacker.ClearAnimViewEntity()
+				attacker.DeployWeapon()
 				}
 				attacker.ClearParent()
-				attacker.DeployWeapon()
 				attacker.PlayerMelee_ExecutionEndAttacker()
 
 				if ( IsAlive( attacker ) )

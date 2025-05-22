@@ -151,6 +151,7 @@ function main()
 	// end debug stuff
 	file.pilotedtitans <- []
 	file.pilotedtitanmodels <- {}
+	AddDamageByCallback( "npc_titan", Execution )
 
 	SpawnPoints_SetRatingMultipliers_Enemy( TD_AI, -2.0, -0.25, 0.0 )
 	SpawnPoints_SetRatingMultipliers_Friendly( TD_AI, 0.5, 0.25, 0.0 )
@@ -168,6 +169,16 @@ function TitanHasPilotInTitan( titan )
 	return true
 
 	return false
+}
+
+function Execution( ent, damageInfo )
+{
+	local attacker = damageInfo.GetAttacker()
+	if( !ent.IsTitan() || damageInfo.GetDamageSourceIdentifier() != eDamageSourceId.titan_melee || !TitanHasPilotInTitan( attacker ) || !ent.GetDoomedState() || !CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) )
+	return
+
+    damageInfo.SetDamage( 0 )
+	thread PlayerTriesExecutionMelee( attacker, ent )
 }
 
 function GiveTitanPilot( titan, trueorfalse )
@@ -588,7 +599,8 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	pilot.SetTeam( team )
 	pilot.SetModel( "models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl" )
 	pilot.kv.VisibilityFlags = 1
-	pilot.SetInvulnerable()
+	pilot.SetMaxHealth( 750 )
+	pilot.SetHealth( pilot.GetMaxHealth() )
 	local title = ""
 	if( titans == "titan_stryder" )
 	title = "Stryder's Pilot"
