@@ -533,6 +533,8 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	thread FirstPersonSequence( attackerSequence, attacker, ref )
 	thread FirstPersonSequence( targetSequence, targetTitan, ref )
 	thread HandlePlayerTitanKill( target, targetTitan )
+	if ( !target.IsPlayer() )
+	thread KillTarget( target )
 	local duration = attacker.GetSequenceDuration( attackerSequence.thirdPersonAnim )
 
 	if ( e.targetAnimation3p == "at_melee_sync_frontdeath" )
@@ -553,6 +555,20 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	targetTitan.kv.VisibilityFlags = 7 // owner can see
 	targetTitan.SetNextThinkNow()
 	wait duration - timer
+}
+
+function KillTarget( target )
+{
+	target.EndSignal( "OnDestroy" )
+	target.EndSignal( "OnDeath" )
+	OnThreadEnd (
+		function () : ( target )
+		{
+			if ( IsValid( target ) && IsAlive( target ) )
+			target.Destroy()
+		}
+	)
+	target.WaittillAnimDone()
 }
 
 function HandlePlayerTitanKill( target, targetTitan )

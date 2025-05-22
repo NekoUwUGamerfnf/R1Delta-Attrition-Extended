@@ -150,9 +150,39 @@ function main()
 //	file.debug = DEBUG_NPC_SPAWN // + DEBUG_ASSAULTPOINT // + DEBUG_KPS // + DEBUG_FRONTLINE_SELECTED
 	// end debug stuff
 	file.pilotedtitans <- []
+	file.pilots <- []
 	file.pilotedtitanmodels <- {}
 	file.spawnedtitans <- {}
+	file.pilotmodels <- [
+	"models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl",
+	"models/Humans/mcor_pilot/male_cq/mcor_pilot_male_cq.mdl",
+	"models/Humans/mcor_pilot/male_dm/mcor_pilot_male_dm.mdl",
+	"models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl",
+	"models/humans/imc_pilot/male_cq/imc_pilot_male_cq.mdl",
+	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl",
+	"models/humans/pilot/female_br/pilot_female_br.mdl",
+	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
+	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	]
+	file.militiapilotmodels <- [
+	"models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl",
+	"models/Humans/mcor_pilot/male_cq/mcor_pilot_male_cq.mdl",
+	"models/Humans/mcor_pilot/male_dm/mcor_pilot_male_dm.mdl",
+	"models/humans/pilot/female_br/pilot_female_br.mdl",
+	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
+	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	]
+	file.imcpilotmodels <- [
+	"models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl",
+	"models/humans/imc_pilot/male_cq/imc_pilot_male_cq.mdl",
+	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl",
+	"models/humans/pilot/female_br/pilot_female_br.mdl",
+	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
+	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	]
 	AddDamageByCallback( "npc_titan", Execution )
+	AddDamageCallback( "npc_titan", NoPain )
+	AddDamageCallback( "npc_soldier", NoPain )
 
 	SpawnPoints_SetRatingMultipliers_Enemy( TD_AI, -2.0, -0.25, 0.0 )
 	SpawnPoints_SetRatingMultipliers_Friendly( TD_AI, 0.5, 0.25, 0.0 )
@@ -172,6 +202,20 @@ function TitanHasPilotInTitan( titan )
 	return false
 }
 
+function NPCIsPilot( pilot )
+{
+	local pilots = []
+	foreach( npc in file.pilots )
+	if ( IsValid( npc ) && IsAlive( npc ) )
+	    pilots.append( npc )
+	file.pilots = pilots
+	foreach( npc in pilots )
+	    if ( npc == pilot )
+	        return true
+
+	return false
+}
+
 function Execution( ent, damageInfo )
 {
 	local attacker = damageInfo.GetAttacker()
@@ -180,6 +224,20 @@ function Execution( ent, damageInfo )
 
     damageInfo.SetDamage( 0 )
 	thread PlayerTriesExecutionMelee( attacker, ent )
+}
+
+function NoPain( ent, damageInfo )
+{
+	if ( ent.IsTitan() && !TitanHasPilotInTitan( ent ) )
+	    return
+
+    if ( !ent.IsTitan() && !NPCIsPilot( ent ) )
+	    return
+
+	if ( !ent.IsTitan() )
+	    damageInfo.SetDamage( 0 ) 
+
+	damageInfo.AddDamageFlags( DAMAGEFLAG_NOPAIN )
 }
 
 function GiveTitanPilot( titan, trueorfalse )
@@ -203,9 +261,30 @@ function GiveTitanPilot( titan, trueorfalse )
 	file.pilotedtitans = pilotedtitans
 }
 
+function SetNPCAsPilot( pilot, trueorfalse )
+{
+	local pilots = []
+	foreach( npc in file.pilots )
+	if ( IsValid( npc ) && IsAlive( npc ) )
+	pilots.append( npc )
+	if ( !IsValid( pilot ) || !IsAlive( pilot ) )
+	return
+	if ( trueorfalse == true )
+	pilots.append( pilot )
+	if ( trueorfalse == false )
+	{
+		local newpilots
+		foreach( npc in pilots )
+		if ( npc != pilot )
+		newpilots.append( pilot )
+		pilots = newpilots
+	}
+	file.pilots = pilots
+}
+
 function CreateCopyOfPilotModel( titan )
 {
-	local model = "models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl"
+	local model = Random( file.pilotmodels )
 	if ( titan in file.pilotedtitanmodels )
 	    model = file.pilotedtitanmodels[ titan ]
 	local prop = CreatePropDynamic( model )
@@ -252,6 +331,7 @@ function NPCPilotEmbarkTitan( pilot, titan )
 
 	pilot.SetInvulnerable()
 	pilot.Anim_Stop()
+	if ( (pilot.ContextAction_IsActive() || pilot.ContextAction_IsBusy()) || pilot.IsInterruptable() )
 	thread FirstPersonSequence( sequence, pilot, titan )
 	EmitSoundOnEntity( titan, Audio )
 	waitthread PlayAnimGravity( titan, animation )
@@ -268,17 +348,18 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 
 	local options = {}
 	pilot.SetInvulnerable()
-	pilot.DisableStarts()
+	pilot.SetParent( dropPod, "ATTACH" )
 	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
 	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 
 	local soldierEntities = [pilot]
 	pilot.kv.VisibilityFlags = 7
 	pilot.SetTitle( title )
+	pilot.ClearParent()
+	pilot.SetOrigin( spawnPoint.GetOrigin() )
 	ActivateFireteamDropPod( dropPod, null, soldierEntities )
 	pilot.ClearInvulnerable()
 	pilot.WaittillAnimDone()
-	pilot.EnableStarts()
 	dropPod.kv.VisibilityFlags = 1
 
 	return pilot
@@ -608,16 +689,27 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	local titans = Random([ "titan_stryder", "titan_atlas", "titan_ogre" ])
 	titanDataTable.setFile = titans
 	local settings = titanDataTable.setFile
-	//titanDataTable.primary = Random
+	titanDataTable.primary = Random([
+		"mp_titanweapon_arc_cannon",
+		"mp_titanweapon_rocket_launcher",
+		"mp_titanweapon_40mm",
+		"mp_titanweapon_sniper",
+		"mp_titanweapon_triple_threat",
+		"mp_titanweapon_xo16"
+	])
+	local pilotmodels = file.pilotmodels
+	if ( team == TEAM_MILITIA )
+	    pilotmodels = file.militiapilotmodels
+	else if ( team == TEAM_IMC )
+	    pilotmodels = file.imcpilotmodels
 
 	local pilot = CreateEntity( "npc_soldier" )
 	DispatchSpawn( pilot )
 	pilot.SetOrigin( spawnOrigin )
 	pilot.SetTeam( team )
-	pilot.SetModel( "models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl" )
+	pilot.SetModel( Random( pilotmodels ) )
 	pilot.kv.VisibilityFlags = 1
-	pilot.SetMaxHealth( 750 )
-	pilot.SetHealth( pilot.GetMaxHealth() )
+	SetNPCAsPilot( pilot, true )
 	local title = ""
 	if ( titans == "titan_stryder" )
 	title = "Stryder's Pilot"
@@ -645,6 +737,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
 	if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
 	{
+		pilot.SetOrigin( titan.GetOrigin() )
 		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
 	    pilot.EnableBehavior( "Follow" )
 		pilot.DisableBehavior( "Assault" )
