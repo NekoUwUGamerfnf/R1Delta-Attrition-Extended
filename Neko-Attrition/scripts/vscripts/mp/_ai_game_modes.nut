@@ -159,26 +159,17 @@ function main()
 	"models/Humans/mcor_pilot/male_dm/mcor_pilot_male_dm.mdl",
 	"models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl",
 	"models/humans/imc_pilot/male_cq/imc_pilot_male_cq.mdl",
-	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl",
-	"models/humans/pilot/female_br/pilot_female_br.mdl",
-	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
-	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl"
 	]
 	file.militiapilotmodels <- [
 	"models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl",
 	"models/Humans/mcor_pilot/male_cq/mcor_pilot_male_cq.mdl",
-	"models/Humans/mcor_pilot/male_dm/mcor_pilot_male_dm.mdl",
-	"models/humans/pilot/female_br/pilot_female_br.mdl",
-	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
-	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	"models/Humans/mcor_pilot/male_dm/mcor_pilot_male_dm.mdl"
 	]
 	file.imcpilotmodels <- [
 	"models/Humans/imc_pilot/male_br/imc_pilot_male_br.mdl",
 	"models/humans/imc_pilot/male_cq/imc_pilot_male_cq.mdl",
-	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl",
-	"models/humans/pilot/female_br/pilot_female_br.mdl",
-	"models/humans/pilot/female_cq/pilot_female_cq.mdl",
-	"models/humans/pilot/female_dm/pilot_female_dm.mdl"
+	"models/humans/imc_pilot/male_dm/imc_pilot_male_dm.mdl"
 	]
 	AddDamageByCallback( "npc_titan", Execution )
 	AddDamageCallback( "npc_titan", NoPain )
