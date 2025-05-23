@@ -334,10 +334,12 @@ function NPCPilotEmbarkTitan( pilot, titan )
 	if ( (pilot.ContextAction_IsActive() || pilot.ContextAction_IsBusy()) || pilot.IsInterruptable() )
 	thread FirstPersonSequence( sequence, pilot, titan )
 	EmitSoundOnEntity( titan, Audio )
+	local pilotmodel = pilot.GetModelName()
 	waitthread PlayAnimGravity( titan, animation )
 	SetStanceStand( titan.GetTitanSoul() )
 	GiveTitanPilot( titan, true )
-	GiveTitanPilotModel( titan, pilot.GetModelName() )
+	GiveTitanPilotModel( titan, pilotmodel )
+	if ( IsValid( pilot ) )
 	pilot.Destroy()
 }
 
