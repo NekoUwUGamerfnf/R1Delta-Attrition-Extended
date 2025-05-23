@@ -760,8 +760,8 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 		thread TitanStandUpHandle( pilot, titan )
 		return
 	}
-	if ( IsValid( titan ) && IsAlive( titan ) )
-	thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
+	else if ( IsValid( titan ) && IsAlive( titan ) )
+	    thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 
 	return
 }
