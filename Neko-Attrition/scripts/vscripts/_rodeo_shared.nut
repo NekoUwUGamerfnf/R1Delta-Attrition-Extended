@@ -2,9 +2,9 @@ function main()
 {
 	Globalize( CodeCallback_OnRodeoAttach )
 	Globalize( CodeCallback_IsValidRodeoTarget )
-	Globalize( AllowTeamRodeo )
 	Globalize( GetTitanSoulBeingRodeoed )
 	Globalize( GetTitanBeingRodeoed )
+	Globalize( AllowTeamRodeo )
 	Globalize( GetPlayerRodeoing )
 	Globalize( GetRodeoPackage )
 	Globalize( GetFriendlyRodeoPlayer )
@@ -196,8 +196,6 @@ function main()
 		panelPersonAnimAlias_DamageState4Idle		= VerifyAnimAlias( "at_Rodeo_Panel_Damage_State_4_Idle" )
 	}
 
-	file.allowedarray <- []
-
 	enum eRodeoAnim
 	{
 		DUMMY
@@ -212,7 +210,49 @@ function main()
 
 	level.debugRodeoAnim <- eRodeoAnim.DUMMY
 
+	if ( IsServer() )
+	{
+		AddClientCommandCallback( "HoldToRodeo", ClientCommand_HoldToRodeo )
 
+		AddCallback_OnClientConnected( Rodeo_OnClientConnected )
+	}
+
+	file.allowedarray <- []
+}
+
+function AllowTeamRodeo( titan, trueorfalse )
+{
+	local allowedarray = []
+	foreach ( npc in file.allowedarray )
+	    if ( IsValid( npc ) && IsAlive( npc ) )
+	        allowedarray.append( npc )
+	if ( !IsValid( titan ) || !IsAlive( titan ) )
+	    return
+	if ( trueorfalse == true )
+	    allowedarray.append( titan )
+	if ( trueorfalse == false )
+	{
+		local newallowedarray = []
+		foreach ( npc in allowedarray )
+		    if ( npc != titan )
+		        newallowedarray.append( npc )
+		allowedarray = newallowedarray
+	}
+	file.allowedarray = allowedarray
+}
+
+function IsAllowedTeamRodeo( titan )
+{
+	local validallowedarray = []
+	foreach ( npc in file.allowedarray )
+	    if ( IsValid( npc ) && IsAlive( npc ) )
+	        validallowedarray.append( npc )
+	file.allowedarray = validallowedarray
+	foreach ( npc in validallowedarray )
+	    if ( npc == titan )
+	        return true
+
+	return false
 }
 
 function CodeCallback_OnRodeoAttach( player, titan )
@@ -234,11 +274,45 @@ function CodeCallback_OnRodeoAttach( player, titan )
 	return sequence
 }
 
+const HOLD_RODEO_DISABLED = 0
+const HOLD_RODEO_ALL = 1
+const HOLD_RODEO_FRIENDLY = 2
+
 function CodeCallback_IsValidRodeoTarget( player, titan )
 {
 	if ( "isDisembarking" in player.s )
 		return false
 
+	local holdToRodeoState = HoldToRodeoState( player )
+
+	if ( holdToRodeoState != HOLD_RODEO_DISABLED )
+	{
+		if ( holdToRodeoState != HOLD_RODEO_FRIENDLY || titan.GetTeam() == player.GetTeam() )
+		{
+			if ( IsClient() )
+			{
+				if ( !player.s.rodeoPressed )
+					return false
+			}
+
+			if ( IsServer() )
+			{
+				// This doesnt work properly so disabling it for now
+
+				//if ( IsValidTitanRodeoTarget( player, titan ) )
+				//	HoldToRodeoUpdate( player, titan )
+
+				if ( !ButtonPressed( player, "use" ) && !ButtonPressed( player, "useandreload" ) )
+					return false
+			}
+		}
+	}
+
+	return IsValidTitanRodeoTarget( player, titan )
+}
+
+function IsValidTitanRodeoTarget( player, titan )
+{
 	if ( !HasSoul( titan ) )
 		return false
 
@@ -269,43 +343,9 @@ function CodeCallback_IsValidRodeoTarget( player, titan )
 		}
 	}
 
-	return true;
-}
-
-function AllowTeamRodeo( titan, trueorfalse )
-{
-	local allowedarray = []
-	foreach( npc in file.allowedarray )
-	if( IsValid( npc ) && IsAlive( npc ) )
-	allowedarray.append( npc )
-	if( !IsValid( titan ) || !IsAlive( titan ) )
-	return
-	if( trueorfalse == true )
-	allowedarray.append( titan )
-	if( trueorfalse == false )
-	{
-		local newallowedarray = []
-		foreach( npc in allowedarray )
-		if( npc != titan )
-		newallowedarray.append( npc )
-		allowedarray = newallowedarray
-	}
-	file.allowedarray = allowedarray
-}
-
-function IsAllowedTeamRodeo( titan )
-{
-	local validallowedarray = []
-	foreach( npc in file.allowedarray )
-	if( IsValid( npc ) && IsAlive( npc ) )
-	validallowedarray.append( npc )
-	file.allowedarray = validallowedarray
-	foreach( npc in validallowedarray )
-	if( npc == titan )
 	return true
-
-	return false
 }
+Globalize( IsValidTitanRodeoTarget )
 
 function FindPlayerJumponSpot( player, titan )
 {
@@ -1235,4 +1275,63 @@ function SpectreFallingOntoTitan( spectre, titan )
 		return false
 
 	return true
+}
+
+function HoldToRodeoEnabled( player )
+{
+	if ( IsServer() )
+	{
+		return player.s.holdToRodeoState > 0
+	}
+	else if ( IsClient() )
+	{
+		return GetConVarInt( "cl_hold_to_rodeo_enable " ) > 0
+	}
+
+	return false
+}
+Globalize( HoldToRodeoEnabled )
+
+function HoldToRodeoState( player )
+{
+	if ( IsServer() )
+	{
+		return player.s.holdToRodeoState
+	}
+	else if ( IsClient() )
+	{
+		return GetConVarInt( "cl_hold_to_rodeo_enable" )
+	}
+
+	return false
+}
+Globalize( HoldToRodeoState )
+
+if ( IsServer() )
+{
+	function HoldToRodeoUpdate( player, titan )
+	{
+		if ( !( "SetUsePrompts" in titan.s ) )
+		{
+			titan.SetUsePrompts( "#HINT_RODEO", "#HINT_RODEO" )
+			titan.s.SetUsePrompts <- true
+		}
+	}
+
+	function Rodeo_OnClientConnected( player )
+	{
+		if ( !( "holdToRodeoState" in player.s ) )
+			player.s.holdToRodeoState <- 0
+	}
+
+	function ClientCommand_HoldToRodeo( player, args )
+	{
+		local holdToRodeoState = args.tointeger()
+		if ( holdToRodeoState < 0 || holdToRodeoState > 2)
+			return true
+	
+		player.s.holdToRodeoState = holdToRodeoState
+	
+		return true
+	}
 }
