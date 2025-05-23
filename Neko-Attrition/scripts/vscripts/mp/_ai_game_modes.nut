@@ -350,15 +350,14 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 
 	local options = {}
 	pilot.SetInvulnerable()
-	pilot.SetParent( dropPod, "ATTACH" )
+	pilot.Anim_Play( "cqb_idle_mp" )
 	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
 	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 
 	local soldierEntities = [pilot]
 	pilot.kv.VisibilityFlags = 7
 	pilot.SetTitle( title )
-	pilot.ClearParent()
-	pilot.SetOrigin( spawnPoint.GetOrigin() )
+	pilot.Anim_Stop()
 	ActivateFireteamDropPod( dropPod, null, soldierEntities )
 	pilot.ClearInvulnerable()
 	pilot.WaittillAnimDone()
