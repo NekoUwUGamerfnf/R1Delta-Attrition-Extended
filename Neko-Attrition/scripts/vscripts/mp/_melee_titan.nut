@@ -492,21 +492,11 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	OnThreadEnd (
 		function () : ( targetTitan, target, attacker, e )
 		{
-			// insure visibility
-			if ( IsValid( targetTitan ) )
-				targetTitan.kv.VisibilityFlags = 7 // owner can see
-
-			if ( IsValid( targetTitan ) && IsAlive( targetTitan ) )
-			    targetTitan.Die()
-
-			if ( IsValid( target ) && IsAlive( target ) && !target.IsPlayer() )
-			    MeleePinkMist( e, e )
-
-			if ( !IsAlive( attacker ) )
+			if ( IsValid( attacker ) && !IsAlive( attacker ) )
 			{
 				attacker.Anim_Stop()
 
-				if ( !e.thrown && IsAlive( target ) && target.IsPlayer() )
+				if ( IsValid( target ) && !e.thrown && IsAlive( target ) && target.IsPlayer() )
 				{
 					target.Anim_Stop()
 					target.SetOwner( null )
@@ -514,8 +504,18 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 					target.ClearAnimViewEntity()
 					target.SetPlayerSettings( e.oldPlayerSettings )
 					target.kv.VisibilityFlags = 7 // all can see
-					target.Die()
+					target.Die( attacker, attacker, { damageSourceId = eDamageSourceId.titan_execution, scriptType = DF_GIB } )
 				}
+			}
+			else if ( !IsValid( attacker ) && IsValid( target ) && !e.thrown && IsAlive( target ) && target.IsPlayer() )
+			{
+				target.Anim_Stop()
+				target.SetOwner( null )
+				target.GetFirstPersonProxy().Anim_Stop()
+				target.ClearAnimViewEntity()
+				target.SetPlayerSettings( e.oldPlayerSettings )
+				target.kv.VisibilityFlags = 7 // all can see
+			    target.Die( target, target, { damageSourceId = eDamageSourceId.titan_execution, scriptType = DF_GIB } )
 			}
 		}
 	)
@@ -534,7 +534,7 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	thread FirstPersonSequence( targetSequence, targetTitan, ref )
 	thread HandlePlayerTitanKill( target, targetTitan )
 	if ( !target.IsPlayer() )
-	thread KillTarget( target )
+	thread KillTarget( attacker, target )
 	local duration = attacker.GetSequenceDuration( attackerSequence.thirdPersonAnim )
 
 	if ( e.targetAnimation3p == "at_melee_sync_frontdeath" )
@@ -557,15 +557,17 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	wait duration - timer
 }
 
-function KillTarget( target )
+function KillTarget( attacker, target )
 {
 	target.EndSignal( "OnDestroy" )
 	target.EndSignal( "OnDeath" )
 	OnThreadEnd (
-		function () : ( target )
+		function () : ( attacker, target )
 		{
-			if ( IsValid( target ) && IsAlive( target ) )
-			target.Destroy()
+			if ( IsValid( target ) && IsAlive( target ) && IsValid( attacker ) )
+			    target.Die( attacker, attacker, { damageSourceId = eDamageSourceId.titan_execution, scriptType = DF_GIB } )
+			else if ( IsValid( target ) && IsAlive( target ) && !IsValid( attacker ) )
+			    target.Die( target, target, { damageSourceId = eDamageSourceId.titan_execution, scriptType = DF_GIB } )
 		}
 	)
 	target.WaittillAnimDone()

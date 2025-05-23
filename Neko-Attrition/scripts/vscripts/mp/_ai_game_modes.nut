@@ -288,7 +288,7 @@ function GiveTitanPilotModel( titan, model )
 	file.pilotedtitanmodels[ titan ] <- model
 }
 
-function NPCPilotEmbarkTitan( pilot, titan )
+function NPCPilotEmbarkTitan( pilot, title, titan )
 {
 	pilot.EndSignal( "OnDestroy" )
 	pilot.EndSignal( "OnDeath" )
@@ -322,16 +322,31 @@ function NPCPilotEmbarkTitan( pilot, titan )
 
 	pilot.SetInvulnerable()
 	pilot.Anim_Stop()
-	if ( (pilot.ContextAction_IsActive() || pilot.ContextAction_IsBusy()) || pilot.IsInterruptable() )
-	thread FirstPersonSequence( sequence, pilot, titan )
-	EmitSoundOnEntity( titan, Audio )
 	local pilotmodel = pilot.GetModelName()
+	local newpilot
+	if ( (pilot.ContextAction_IsActive() || pilot.ContextAction_IsBusy()) || pilot.IsInterruptable() )
+	    thread FirstPersonSequence( sequence, pilot, titan )
+    else
+	{
+	    newpilot = CreateEntity( "npc_soldier" )
+	    DispatchSpawn( newpilot )
+	    newpilot.SetOrigin( pilot.GetOrigin() )
+	    newpilot.SetTeam( pilot.GetTeam() )
+	    newpilot.SetModel( pilotmodel )
+	    newpilot.SetInvulnerable()
+	    newpilot.SetTitle( title )
+		pilot.Destroy()
+		thread FirstPersonSequence( sequence, newpilot, titan )
+	}
+	EmitSoundOnEntity( titan, Audio )
 	waitthread PlayAnimGravity( titan, animation )
 	SetStanceStand( titan.GetTitanSoul() )
 	GiveTitanPilot( titan, true )
 	GiveTitanPilotModel( titan, pilotmodel )
 	if ( IsValid( pilot ) )
-	pilot.Destroy()
+	    pilot.Destroy()
+	if ( IsValid( newpilot ) )
+	    newpilot.Destroy()
 }
 
 function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
@@ -341,17 +356,26 @@ function Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
 
 	local options = {}
 	pilot.SetInvulnerable()
-	pilot.Anim_Play( "cqb_idle_mp" )
+	pilot.kv.VisibilityFlags = 1
 	waitthread LaunchAnimDropPod( dropPod, "pod_testpath", spawnPoint.GetOrigin(), spawnPoint.GetAngles(), options )
 	PlayFX( "droppod_impact", spawnPoint.GetOrigin(), spawnPoint.GetAngles() )
 
-	local soldierEntities = [pilot]
-	pilot.kv.VisibilityFlags = 7
-	pilot.SetTitle( title )
-	pilot.Anim_Stop()
+	local newpilot = CreateEntity( "npc_soldier" )
+	DispatchSpawn( newpilot )
+	newpilot.SetOrigin( pilot.GetOrigin() )
+	newpilot.SetTeam( pilot.GetTeam() )
+	newpilot.SetModel( pilot.GetModelName() )
+	newpilot.SetInvulnerable()
+	newpilot.SetTitle( title )
+	local soldierEntities = [newpilot]
 	ActivateFireteamDropPod( dropPod, null, soldierEntities )
+	newpilot.WaittillAnimDone()
+	pilot.SetTitle( title )
+	pilot.kv.VisibilityFlags = 7
 	pilot.ClearInvulnerable()
-	pilot.WaittillAnimDone()
+	pilot.SetOrigin( newpilot.GetOrigin() )
+	pilot.SetAngles( newpilot.GetAngles() )
+	newpilot.Destroy()
 	dropPod.kv.VisibilityFlags = 1
 
 	return pilot
@@ -700,7 +724,6 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	pilot.SetOrigin( spawnOrigin )
 	pilot.SetTeam( team )
 	pilot.SetModel( Random( pilotmodels ) )
-	pilot.kv.VisibilityFlags = 1
 	SetNPCAsPilot( pilot, true )
 	local title = ""
 	if ( titans == "titan_stryder" )
@@ -733,7 +756,7 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
 	    pilot.EnableBehavior( "Follow" )
 		pilot.DisableBehavior( "Assault" )
-	    thread NPCPilotEmbarkTitan( pilot, titan )
+	    thread NPCPilotEmbarkTitan( pilot, title, titan )
 		thread TitanStandUpHandle( pilot, titan )
 		return
 	}
