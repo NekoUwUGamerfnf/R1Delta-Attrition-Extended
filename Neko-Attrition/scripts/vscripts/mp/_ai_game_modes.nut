@@ -149,9 +149,10 @@ function main()
 //	file.debug = DEBUG_FRONTLINE_SWITCHED
 //	file.debug = DEBUG_NPC_SPAWN // + DEBUG_ASSAULTPOINT // + DEBUG_KPS // + DEBUG_FRONTLINE_SELECTED
 	// end debug stuff
-	file.pilotedtitans <- []
-	file.pilots <- []
+	file.pilotedtitans <- {}
+	file.pilots <- {}
 	file.pilotedtitanmodels <- {}
+	file.titanisembarking <- {}
 	file.spawnedtitans <- {}
 	file.pilotmodels <- [
 	"models/Humans/mcor_pilot/male_br/mcor_pilot_male_br.mdl",
@@ -181,28 +182,16 @@ function main()
 
 function TitanHasPilotInTitan( titan )
 {
-	local pilotedtitans = []
-	foreach( npc in file.pilotedtitans )
-	if ( IsValid( npc ) && IsAlive( npc ) )
-	    pilotedtitans.append( npc )
-	file.pilotedtitans = pilotedtitans
-	foreach( npc in pilotedtitans )
-	    if ( npc == titan )
-	        return true
+    if ( titan in file.pilotedtitans && file.pilotedtitans[ titan ] )
+	    return true
 
 	return false
 }
 
 function NPCIsPilot( pilot )
 {
-	local pilots = []
-	foreach( npc in file.pilots )
-	if ( IsValid( npc ) && IsAlive( npc ) )
-	    pilots.append( npc )
-	file.pilots = pilots
-	foreach( npc in pilots )
-	    if ( npc == pilot )
-	        return true
+    if ( pilot in file.pilots && file.pilots[ pilot ] )
+	    return true
 
 	return false
 }
@@ -233,44 +222,12 @@ function NoPain( ent, damageInfo )
 
 function GiveTitanPilot( titan, trueorfalse )
 {
-	local pilotedtitans = []
-	foreach( npc in file.pilotedtitans )
-	if ( IsValid( npc ) && IsAlive( npc ) )
-	pilotedtitans.append( npc )
-	if ( !IsValid( titan ) || !IsAlive( titan ) )
-	return
-	if ( trueorfalse == true )
-	pilotedtitans.append( titan )
-	if ( trueorfalse == false )
-	{
-		local newpilotedtitans
-		foreach( npc in pilotedtitans )
-		if ( npc != titan )
-		newpilotedtitans.append( titan )
-		pilotedtitans = newpilotedtitans
-	}
-	file.pilotedtitans = pilotedtitans
+	file.pilotedtitans[ titan ] <- trueorfalse
 }
 
 function SetNPCAsPilot( pilot, trueorfalse )
 {
-	local pilots = []
-	foreach( npc in file.pilots )
-	if ( IsValid( npc ) && IsAlive( npc ) )
-	pilots.append( npc )
-	if ( !IsValid( pilot ) || !IsAlive( pilot ) )
-	return
-	if ( trueorfalse == true )
-	pilots.append( pilot )
-	if ( trueorfalse == false )
-	{
-		local newpilots
-		foreach( npc in pilots )
-		if ( npc != pilot )
-		newpilots.append( pilot )
-		pilots = newpilots
-	}
-	file.pilots = pilots
+	file.pilots[ pilot ] <- trueorfalse
 }
 
 function CreateCopyOfPilotModel( titan )
@@ -290,16 +247,15 @@ function GiveTitanPilotModel( titan, model )
 
 function NPCPilotEmbarkTitan( pilot, title, titan )
 {
-	pilot.EndSignal( "OnDestroy" )
-	pilot.EndSignal( "OnDeath" )
-	titan.EndSignal( "OnDestroy" )
-	titan.EndSignal( "OnDeath" )
 	local embarkSet = FindBestEmbark( pilot, titan )
-	while( embarkSet == null )
+	while ( embarkSet == null && IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
 	{
 		wait 0.1
+		if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
 		embarkSet = FindBestEmbark( pilot, titan )
 	}
+	if ( embarkSet == null )
+	    return
 	local animation = embarkSet.animSet.titanKneelingAnim
 	local titanSubClass = GetSoulTitanType( titan.GetTitanSoul() )
 	local Audio = GetAudioFromAlias( titanSubClass, embarkSet.audioSet.thirdPersonKneelingAudioAlias )
@@ -307,15 +263,12 @@ function NPCPilotEmbarkTitan( pilot, title, titan )
 	sequence.attachment = "hijack"
 	sequence.useAnimatedRefAttachment = embarkSet.action.useAnimatedRefAttachment
 	sequence.thirdPersonAnim = GetAnimFromAlias( titanSubClass, embarkSet.animSet.thirdPersonKneelingAlias )
-	// Never Used Because Game Has No Grapple
-	/*
 	if ( titan.GetTitanSoul().GetStance() > STANCE_STANDING )
 	{
 		sequence.thirdPersonAnim = GetAnimFromAlias( titanSubClass, embarkSet.animSet.thirdPersonStandingAlias )
 	    animation = embarkSet.animSet.titanStandingAnim
 		Audio = GetAudioFromAlias( titanSubClass, embarkSet.audioSet.thirdPersonStandingAudioAlias )
 	}
-	*/
 
 	if ( IsCloaked( pilot ) )
 		pilot.SetCloakDuration( 0, 0, 1.5 )
@@ -324,6 +277,7 @@ function NPCPilotEmbarkTitan( pilot, title, titan )
 	pilot.Anim_Stop()
 	local pilotmodel = pilot.GetModelName()
 	local newpilot
+	file.titanisembarking[ titan ] <- true
 	if ( (pilot.ContextAction_IsActive() || pilot.ContextAction_IsBusy()) || pilot.IsInterruptable() )
 	    thread FirstPersonSequence( sequence, pilot, titan )
     else
@@ -340,9 +294,13 @@ function NPCPilotEmbarkTitan( pilot, title, titan )
 	}
 	EmitSoundOnEntity( titan, Audio )
 	waitthread PlayAnimGravity( titan, animation )
-	SetStanceStand( titan.GetTitanSoul() )
-	GiveTitanPilot( titan, true )
-	GiveTitanPilotModel( titan, pilotmodel )
+	if ( IsValid( titan ) && IsAlive( titan ) )
+	{
+	    SetStanceStand( titan.GetTitanSoul() )
+	    GiveTitanPilot( titan, true )
+	    GiveTitanPilotModel( titan, pilotmodel )
+		file.titanisembarking[ titan ] <- false
+	}
 	if ( IsValid( pilot ) )
 	    pilot.Destroy()
 	if ( IsValid( newpilot ) )
@@ -752,10 +710,11 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
 	if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
 	{
-		pilot.SetOrigin( titan.GetOrigin() )
 		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
 	    pilot.EnableBehavior( "Follow" )
 		pilot.DisableBehavior( "Assault" )
+		titan.InitFollowBehavior( titan, AIF_FIRETEAM )
+	    titan.EnableBehavior( "Follow" )
 	    thread NPCPilotEmbarkTitan( pilot, title, titan )
 		thread TitanStandUpHandle( pilot, titan )
 		return
@@ -775,11 +734,11 @@ function TitanStandUpHandle( pilot, titan )
 	OnThreadEnd(
 		function() : ( titan )
 		{
-			if ( IsValid( titan ) && IsAlive( titan ) && !TitanHasPilotInTitan( titan ) )
+			if ( IsValid( titan ) && IsAlive( titan ) && !TitanHasPilotInTitan( titan ) && !(titan in file.titanisembarking && file.titanisembarking[ titan ]) )
 			thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
 		}
 	)
-	WaitForever()
+	wait 10
 }
 
 function AttritionGiveTitanRandomTacticalAbility( titan )

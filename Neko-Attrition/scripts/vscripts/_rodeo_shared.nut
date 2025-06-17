@@ -217,40 +217,18 @@ function main()
 		AddCallback_OnClientConnected( Rodeo_OnClientConnected )
 	}
 
-	file.allowedarray <- []
+	file.allowedrodeo <- {}
 }
 
 function AllowTeamRodeo( titan, trueorfalse )
 {
-	local allowedarray = []
-	foreach ( npc in file.allowedarray )
-	    if ( IsValid( npc ) && IsAlive( npc ) )
-	        allowedarray.append( npc )
-	if ( !IsValid( titan ) || !IsAlive( titan ) )
-	    return
-	if ( trueorfalse == true )
-	    allowedarray.append( titan )
-	if ( trueorfalse == false )
-	{
-		local newallowedarray = []
-		foreach ( npc in allowedarray )
-		    if ( npc != titan )
-		        newallowedarray.append( npc )
-		allowedarray = newallowedarray
-	}
-	file.allowedarray = allowedarray
+	file.allowedrodeo[ titan ] <- trueorfalse
 }
 
 function IsAllowedTeamRodeo( titan )
 {
-	local validallowedarray = []
-	foreach ( npc in file.allowedarray )
-	    if ( IsValid( npc ) && IsAlive( npc ) )
-	        validallowedarray.append( npc )
-	file.allowedarray = validallowedarray
-	foreach ( npc in validallowedarray )
-	    if ( npc == titan )
-	        return true
+	if ( titan in file.allowedrodeo && file.allowedrodeo[ titan ] )
+        return true
 
 	return false
 }
