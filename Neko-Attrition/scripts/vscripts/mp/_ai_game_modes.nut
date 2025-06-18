@@ -1042,11 +1042,11 @@ function TeamDeathmatchSpawnNPCsThink()
 	local teams = [TEAM_IMC, TEAM_MILITIA]
 	local extraGrunts
 
-		if ( !Flag( "Disable_IMC" ) && GameRules.GetGameMode() == ATTRITION )
-			thread SpawnPilotWithTitans( TEAM_IMC )
+	if ( !Flag( "Disable_IMC" ) && GameRules.GetGameMode() == ATTRITION )
+		thread SpawnPilotWithTitans( TEAM_IMC )
 
-		if ( !Flag( "Disable_MILITIA" ) && GameRules.GetGameMode() == ATTRITION )
-			thread SpawnPilotWithTitans( TEAM_MILITIA )
+	if ( !Flag( "Disable_MILITIA" ) && GameRules.GetGameMode() == ATTRITION )
+		thread SpawnPilotWithTitans( TEAM_MILITIA )
 
 	while ( IsNPCSpawningEnabled() )
 	{
